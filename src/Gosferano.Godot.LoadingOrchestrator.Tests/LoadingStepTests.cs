@@ -11,7 +11,7 @@ public class LoadingStepTests
     {
         // Arrange
         var loadable = new MockAsyncLoadable();
-        var step = new LoadingStep<string>(1.0f, "Test Step", loadable);
+        var step = new LoadingStep<string>(1.0f, loadable);
 
         // Act
         await step.Execute();
@@ -26,7 +26,7 @@ public class LoadingStepTests
     {
         // Arrange
         var loadable = new MockAsyncLoadable();
-        var step = new LoadingStep<string>(1.0f, "Test Step", loadable);
+        var step = new LoadingStep<string>(1.0f, loadable);
         var progressReports = new List<(float, string)>();
 
         // Act
@@ -80,7 +80,7 @@ public class LoadingStepTests
     {
         // Arrange
         var loadable = new MockAsyncLoadable { ExceptionToThrow = new InvalidOperationException("Test error") };
-        var step = new LoadingStep<string>(1.0f, "Test Step", loadable);
+        var step = new LoadingStep<string>(1.0f, loadable);
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(() => step.Execute());

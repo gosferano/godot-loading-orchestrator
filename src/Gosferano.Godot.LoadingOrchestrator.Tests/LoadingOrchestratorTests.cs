@@ -12,7 +12,7 @@ public class LoadingOrchestratorTests
     {
         // Arrange
         var loadable = new MockAsyncLoadable();
-        var steps = new[] { new LoadingStep<string>(1.0f, "Step 1", loadable) };
+        var steps = new[] { new LoadingStep<string>(1.0f, loadable) };
         var progressReports = new List<(float, string)>();
 
         // Note: We can't easily test LoadingOrchestrator without SceneTree
@@ -32,7 +32,7 @@ public class LoadingOrchestratorTests
     {
         // Arrange
         var loadable = new MockAsyncLoadable { ExceptionToThrow = new InvalidOperationException("Test error") };
-        var step = new LoadingStep<string>(1.0f, "Failing Step", loadable);
+        var step = new LoadingStep<string>(1.0f, loadable);
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(() => step.Execute());

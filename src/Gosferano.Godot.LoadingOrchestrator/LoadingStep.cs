@@ -12,9 +12,9 @@ public class LoadingStep<TStatus>
     public float Weight { get; }
 
     /// <summary>
-    /// Status object for this step
+    /// Status object for this step (only used for Actions)
     /// </summary>
-    public TStatus Status { get; }
+    public TStatus? Status { get; }
 
     /// <summary>
     /// Optional loadable resource
@@ -29,7 +29,7 @@ public class LoadingStep<TStatus>
     /// <summary>
     /// Creates a loading step with an IAsyncLoadable
     /// </summary>
-    public LoadingStep(float weight, TStatus status, IAsyncLoadable<TStatus> loadable)
+    public LoadingStep(float weight, IAsyncLoadable<TStatus> loadable)
     {
         if (weight <= 0f)
         {
@@ -37,7 +37,7 @@ public class LoadingStep<TStatus>
         }
 
         Weight = weight;
-        Status = status;
+        Status = default;
         Loadable = loadable;
         Action = null;
     }
@@ -70,6 +70,11 @@ public class LoadingStep<TStatus>
         }
         else if (Action != null)
         {
+            if (Status is null)
+            {
+                throw new InvalidOperationException("Status cannot be null for Action steps");
+            }
+
             onProgress?.Invoke(0f, Status);
             await Action();
             onProgress?.Invoke(1f, Status);
