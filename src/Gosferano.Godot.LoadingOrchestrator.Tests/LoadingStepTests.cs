@@ -10,7 +10,7 @@ public class LoadingStepTests
     public async Task Execute_WithLoadable_CallsLoadResources()
     {
         // Arrange
-        var loadable = new MockAsyncLoadable();
+        var loadable = new MockAsyncLoadable(10);
         var step = new LoadingStep<string>(1.0f, loadable);
 
         // Act
@@ -25,7 +25,7 @@ public class LoadingStepTests
     public async Task Execute_WithLoadable_ReportsProgress()
     {
         // Arrange
-        var loadable = new MockAsyncLoadable();
+        var loadable = new MockAsyncLoadable(10);
         var step = new LoadingStep<string>(1.0f, loadable);
         var progressReports = new List<(float, string)>();
 
@@ -79,7 +79,7 @@ public class LoadingStepTests
     public async Task Execute_WithLoadableThrowingException_PropagatesException()
     {
         // Arrange
-        var loadable = new MockAsyncLoadable { ExceptionToThrow = new InvalidOperationException("Test error") };
+        var loadable = new MockAsyncLoadable(10) { ExceptionToThrow = new InvalidOperationException("Test error") };
         var step = new LoadingStep<string>(1.0f, loadable);
 
         // Act & Assert
