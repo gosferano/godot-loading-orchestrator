@@ -38,19 +38,20 @@ using Gosferano.Godot.LoadingOrchestrator;
 
 public partial class MyLoadingScreen : Control, ILoadingScreen<string>
 {
-    private Label _statusLabel;
-    private ProgressBar _progressBar;
-
-    public override void _Ready()
-    {
-        _statusLabel = GetNode<Label>("StatusLabel");
-        _progressBar = GetNode<ProgressBar>("ProgressBar");
-    }
+    [Export] private Label? _statusLabel;
+    [Export] private ProgressBar? _progressBar;
 
     public void UpdateLoadingState(float progress, string status)
     {
-        _progressBar.Value = progress * 100;
-        _statusLabel.Text = status;
+        if (_progressBar != null)
+        {
+            _progressBar.Value = progress * 100;
+        }
+        
+        if (_statusLabel != null)
+        {
+            _statusLabel.Text = status;
+        }
     }
 }
 ```
