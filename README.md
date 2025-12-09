@@ -1,7 +1,7 @@
 # Loading Orchestrator for Godot
 
-[![NuGet](https://img.shields.io/nuget/v/Gosferano.Godot.LoadingOrchestrator.svg)](https://www.nuget.org/packages/Gosferano.Godot.LoadingOrchestrator)
-[![NuGet Downloads](https://img.shields.io/nuget/dt/Gosferano.Godot.LoadingOrchestrator.svg)](https://www.nuget.org/packages/Gosferano.Godot.LoadingOrchestrator)
+[![NuGet](https://img.shields.io/nuget/v/Gosferano.Godot.LoadingOrchestrator)](https://www.nuget.org/packages/Gosferano.Godot.LoadingOrchestrator)
+[![NuGet Downloads](https://img.shields.io/nuget/dt/Gosferano.Godot.LoadingOrchestrator)](https://www.nuget.org/packages/Gosferano.Godot.LoadingOrchestrator)
 [![GitHub](https://img.shields.io/github/license/gosferano/godot-loading-orchestrator.svg)](https://github.com/gosferano/godot-loading-orchestrator/blob/main/LICENSE)
 
 A lightweight, flexible async loading orchestration library for Godot 4 C# projects. Manage complex multi-step loading operations with weighted progress tracking and clean separation of concerns.
