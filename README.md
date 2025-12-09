@@ -9,6 +9,7 @@ A lightweight, flexible async loading orchestration library for Godot 4 C# proje
 ## Features
 
 - ✅ **Weighted Progress Tracking** - Assign different weights to loading steps for accurate progress reporting
+- ✅ **Generic Status Support** - Use any type for progress status (string, structs, custom classes)
 - ✅ **Flexible Loading Screens** - Use any Node as a loading screen, no enforced structure
 - ✅ **Async/Await Pattern** - Modern C# async patterns throughout
 - ✅ **Composable Steps** - Mix `IAsyncLoadable` implementations and custom async actions
@@ -25,7 +26,7 @@ dotnet add package Gosferano.Godot.LoadingOrchestrator
 
 ### Via Package Reference
 ```xml
-<PackageReference Include="Gosferano.Godot.LoadingOrchestrator" Version="1.0.0" />
+<PackageReference Include="Gosferano.Godot.LoadingOrchestrator" Version="0.2.0" />
 ```
 
 ## Quick Start
@@ -35,7 +36,7 @@ dotnet add package Gosferano.Godot.LoadingOrchestrator
 using Godot;
 using Gosferano.Godot.LoadingOrchestrator;
 
-public partial class MyLoadingScreen : Control, ILoadingScreen<Status>
+public partial class MyLoadingScreen : Control, ILoadingScreen<string>
 {
     private Label _statusLabel;
     private ProgressBar _progressBar;
@@ -46,10 +47,10 @@ public partial class MyLoadingScreen : Control, ILoadingScreen<Status>
         _progressBar = GetNode<ProgressBar>("ProgressBar");
     }
 
-    public void UpdateLoadingState(float progress, Status status)
+    public void UpdateLoadingState(float progress, string status)
     {
         _progressBar.Value = progress * 100;
-        _statusLabel.Text = status.Message;
+        _statusLabel.Text = status;
     }
 }
 ```
@@ -95,8 +96,8 @@ public partial class GameLoader : Node
 
         var steps = new[]
         {
-            new LoadingStep<string>(1f, "Loading database", new GameDatabase()),
-            new LoadingStep<string>(2f, "Generating world", GenerateWorld),
+            new LoadingStep<string>(1f, new GameDatabase()),           // Loadable - no status param
+            new LoadingStep<string>(2f, "Generating world", GenerateWorld),  // Action - needs status
             new LoadingStep<string>(1f, "Initializing UI", InitializeUI)
         };
 
@@ -164,6 +165,40 @@ var steps = new[]
 await orchestrator.ExecuteSteps(steps);
 ```
 
+### Using Custom Status Types
+
+Use structs or classes for rich progress information:
+```csharp
+public readonly struct LoadingProgress
+{
+    public string Message { get; init; }
+    public int ItemsLoaded { get; init; }
+    public int TotalItems { get; init; }
+}
+
+var orchestrator = new LoadingOrchestrator<LoadingProgress>(GetTree());
+
+public class ItemLoader : IAsyncLoadable<LoadingProgress>
+{
+    public async Task LoadResources(Action<float, LoadingProgress>? onProgress = null)
+    {
+        for (int i = 0; i < 100; i++)
+        {
+            await LoadItem(i);
+            onProgress?.Invoke(
+                i / 100f, 
+                new LoadingProgress 
+                { 
+                    Message = "Loading items",
+                    ItemsLoaded = i,
+                    TotalItems = 100
+                }
+            );
+        }
+    }
+}
+```
+
 ### Error Handling
 ```csharp
 await orchestrator.ExecuteStepsWithLoadingScreen(
@@ -178,7 +213,7 @@ await orchestrator.ExecuteStepsWithLoadingScreen(
         GD.PrintErr($"Loading failed: {ex.Message}");
         
         // Show error on loading screen
-        if (loadingScreen is ILoadingScreen ls)
+        if (loadingScreen is ILoadingScreen<string> ls)
         {
             ls.UpdateLoadingState(0f, $"Error: {ex.Message}");
         }
@@ -224,9 +259,9 @@ Translate strings before passing them:
 ```csharp
 var steps = new[]
 {
-    new LoadingStep<string>(1f, Tr("loading.database"), database),
-    new LoadingStep<string>(2f, Tr("loading.world"), worldGenerator),
-    new LoadingStep<string>(1f, Tr("loading.ui"), uiLoader)
+    new LoadingStep<string>(1f, database),                    // Loadable controls its own messages
+    new LoadingStep<string>(2f, Tr("loading.world"), GenerateWorld),   // Action uses translated status
+    new LoadingStep<string>(1f, Tr("loading.ui"), InitializeUI)
 };
 
 await orchestrator.ExecuteStepsWithLoadingScreen(
@@ -234,35 +269,13 @@ await orchestrator.ExecuteStepsWithLoadingScreen(
     steps,
     onComplete: async () =>
     {
-        if (loadingScreen is ILoadingScreen ls)
+        if (loadingScreen is ILoadingScreen<string> ls)
         {
             ls.UpdateLoadingState(1f, Tr("loading.complete"));
         }
         await Task.Delay(500);
     }
 );
-```
-
-### Combining with ResourceLoaderUtilities
-```csharp
-var steps = new[]
-{
-    new LoadingStep<string>(1f, "Loading textures", async () =>
-    {
-        var texture = await ResourceLoaderUtilities.LoadResourceAsync<Texture2D>(
-            "res://textures/atlas.png"
-        );
-        ApplyTexture(texture);
-    }),
-    
-    new LoadingStep<string>(2f, "Loading audio", async () =>
-    {
-        var music = await ResourceLoaderUtilities.LoadResourceAsync<AudioStream>(
-            "res://audio/music.ogg"
-        );
-        PlayMusic(music);
-    })
-};
 ```
 
 ### Progress Tracking Without Loading Screen
@@ -283,11 +296,12 @@ foreach (var (progress, message) in progressReports)
 
 ## API Reference
 
-### LoadingOrchestrator
+### LoadingOrchestrator<TStatus>
 
 #### Constructor
 ```csharp
-LoadingOrchestrator(SceneTree sceneTree)
+LoadingOrchestrator<TStatus>(SceneTree sceneTree)
+  where TStatus : notnull
 ```
 
 #### Methods
@@ -295,8 +309,8 @@ LoadingOrchestrator(SceneTree sceneTree)
 **ExecuteSteps**
 ```csharp
 Task ExecuteSteps(
-    LoadingStep[] steps,
-    Action<float, string>? onProgress = null
+    LoadingStep<TStatus>[] steps,
+    Action<float, TStatus>? onProgress = null
 )
 ```
 Executes multiple loading steps with aggregate progress tracking.
@@ -305,7 +319,7 @@ Executes multiple loading steps with aggregate progress tracking.
 ```csharp
 Task ExecuteWithLoadingScreen(
     Node loadingScreen,
-    Func<Action<float, string>, Task> operation,
+    Func<Action<float, TStatus>, Task> operation,
     Func<Task>? onComplete = null,
     Func<Exception, Task>? onError = null
 )
@@ -316,39 +330,44 @@ Executes an operation with a loading screen, handling lifecycle and errors.
 ```csharp
 Task ExecuteStepsWithLoadingScreen(
     Node loadingScreen,
-    LoadingStep[] steps,
+    LoadingStep<TStatus>[] steps,
     Func<Task>? onComplete = null,
     Func<Exception, Task>? onError = null
 )
 ```
 Convenience method combining ExecuteSteps and ExecuteWithLoadingScreen.
 
-### LoadingStep
+### LoadingStep<TStatus>
 
 #### Constructors
 ```csharp
-LoadingStep(float weight, Status status, IAsyncLoadable loadable)
-LoadingStep(float weight, Status status, Func<Task> action)
+// For loadables (status managed by loadable)
+LoadingStep<TStatus>(float weight, IAsyncLoadable<TStatus> loadable)
+
+// For actions (status provided by caller)
+LoadingStep<TStatus>(float weight, TStatus status, Func<Task> action)
 ```
 
 #### Properties
-- `float Weight` - Weight for progress calculation
-- `string Description` - Description or localization key
+- `float Weight` - Weight for progress calculation (must be > 0)
+- `TStatus? Status` - Status object (only used for actions)
+- `IAsyncLoadable<TStatus>? Loadable` - Optional loadable resource
+- `Func<Task>? Action` - Optional async action
 
-### IAsyncLoadable
+### IAsyncLoadable<TStatus>
 ```csharp
-public interface IAsyncLoadable
+public interface IAsyncLoadable<TStatus> where TStatus : notnull
 {
     bool IsLoaded { get; }
-    Task LoadResources(Action<float, string>? onProgress = null);
+    Task LoadResources(Action<float, TStatus>? onProgress = null);
 }
 ```
 
-### ILoadingScreen
+### ILoadingScreen<TStatus>
 ```csharp
-public interface ILoadingScreen<Status>
+public interface ILoadingScreen<in TStatus> where TStatus : notnull
 {
-    void UpdateLoadingState(float progress, Status status);
+    void UpdateLoadingState(float progress, TStatus status);
 }
 ```
 
@@ -372,7 +391,7 @@ new LoadingStep<string>(8f, "Generate world", GenerateWorld)
 
 Report progress within long-running operations:
 ```csharp
-public async Task LoadResources(Action<float, Status>? onProgress = null)
+public async Task LoadResources(Action<float, string>? onProgress = null)
 {
     for (int i = 0; i < items.Length; i++)
     {
